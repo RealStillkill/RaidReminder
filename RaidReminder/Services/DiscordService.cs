@@ -50,7 +50,6 @@ namespace RaidReminder.Services
 				_logger.LogInformation("Registering commands");
 				using (var scope = _serviceScopeFactory.CreateScope())
 				{
-
 					await _interactionService.AddModuleAsync<RaidModule>(scope.ServiceProvider);
 					await _interactionService.RegisterCommandsGloballyAsync(true);
 				}
@@ -149,24 +148,22 @@ namespace RaidReminder.Services
 			switch (arg.Severity)
 			{
 				case LogSeverity.Critical:
-					_logger.LogCritical(arg.Message);
+					_logger.LogCritical(arg.Exception, arg.Message ?? "<No message>");
 					break;
 				case LogSeverity.Error:
-					_logger.LogError(arg.Message);
+					_logger.LogError(arg.Exception, arg.Message ?? "<No message>");
 					break;
 				case LogSeverity.Debug:
-					_logger.LogDebug(arg.Message);
+					_logger.LogDebug(arg.Exception, arg.Message ?? "<No message>");
 					break;
 				case LogSeverity.Verbose:
-					_logger.LogInformation(arg.Message);
+					_logger.LogInformation(arg.Exception, arg.Message ?? "<No message>");
 					break;
 				case LogSeverity.Warning:
-					_logger.LogWarning(arg.Message);
+					_logger.LogWarning(arg.Exception, arg.Message ?? "<No message>");
 					break;
 				case LogSeverity.Info:
-					_logger.LogInformation(arg.Message);
-					break;
-				default:
+					_logger.LogInformation(arg.Exception, arg.Message ?? "<No message>");
 					break;
 			}
 			return Task.CompletedTask;
