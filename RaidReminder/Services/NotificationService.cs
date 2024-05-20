@@ -84,6 +84,11 @@ namespace RaidReminder.Services
 
 		private async void Timer_TimerElapsed(object? sender, ElapsedEventArgs e)
 		{
+			void removeElapsedTimer(int id)
+			{
+				timers.Remove(timers.First(x => x.NotificationId == id));
+			}
+
 			using (var scope = _serviceProvider.CreateAsyncScope())
 			using (ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>())
 			{
@@ -96,18 +101,29 @@ namespace RaidReminder.Services
 					return;
 
 				if (model.RepeatWeekly)
-					await AddNotificationAsync(model);
+				{
+					removeElapsedTimer(id);
+					InitializeNotification(model);
+				}
+					
+				else
+				{
+					dbContext.RaidNotifications.Remove(model);
+					removeElapsedTimer(id);
+				}
 
 				SocketTextChannel channel = client.GetChannel(model.ChannelId) as SocketTextChannel;
 				IRole role = client.GetGuild(model.GuildId).GetRole(model.RoleId);
 
-				ComponentBuilder compBuilder = new ComponentBuilder()
-					.AddRow(new ActionRowBuilder()
-					.WithButton("delete notification", "delete-notification", ButtonStyle.Danger));
+				//ComponentBuilder compBuilder = new ComponentBuilder()
+				//	.AddRow(new ActionRowBuilder()
+				//	.WithButton("delete notification", "delete-notification", ButtonStyle.Danger));
 
 
-				await channel.SendMessageAsync($"{role.Mention} it is time for raid.", components:compBuilder.Build());
+				await channel.SendMessageAsync($"{role.Mention} it is time for raid.");
 			}
+
+			
 		}
 
 		public async Task StartAsync()
@@ -142,7 +158,7 @@ namespace RaidReminder.Services
 			DateTime currentDateTime = DateTime.Now;
 			int daysToAdd = ((int)raidNotification.Day - (int)currentDateTime.DayOfWeek + 7) % 7;
 			DateTime result = new DateTime(currentDateTime.Year, currentDateTime.Month, currentDateTime.Day, 
-				raidNotification.Time.Hour, raidNotification.Time.Minute, raidNotification.Time.Second);
+			raidNotification.Time.Hour, raidNotification.Time.Minute, raidNotification.Time.Second);
 			NextNotification = result.AddDays(daysToAdd);
 			if (NextNotification - DateTime.Now < TimeSpan.Zero)
 				NextNotification = NextNotification.AddDays(7);
