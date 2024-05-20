@@ -38,17 +38,49 @@ namespace RaidReminder.Services
 				var model = await dbContext.RaidNotifications.AddAsync(notification);
 				await dbContext.SaveChangesAsync();
 
-				NotificationTimer timer = new NotificationTimer(model.Entity);
-				timer.TimerElapsed += Timer_TimerElapsed;
-				timers.Add(timer);
-				return timer;
+				return InitializeNotification(model.Entity);
 			}
 		}
 
-		public async Task RemoveNotificationAsync()
+		public async Task<IEnumerable<RaidNotificationModel>> GetGuildNotifications(ulong guildId)
 		{
-
+			using (var scope = _serviceProvider.CreateScope())
+			using (ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>())
+			{
+				return dbContext.RaidNotifications.Where(x => x.GuildId == guildId).ToArray();
+			}
 		}
+
+		public DateTime GetNextNotificationDate(int id)
+		{
+			return timers.First(x => x.NotificationId == id).NextNotification;
+		}
+
+		public async Task RemoveNotificationAsync(int id)
+		{
+			using (var scope = _serviceProvider.CreateScope())
+			using (ApplicationDbContext dbContext = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>())
+			{
+				var model = await dbContext.RaidNotifications.FindAsync(id);
+				if (model == null)
+					return;
+
+				dbContext.RaidNotifications.Remove(model);
+				await dbContext.SaveChangesAsync();
+
+				timers.Remove(timers.First(x => x.NotificationId == id));
+			}
+		}
+
+		private NotificationTimer InitializeNotification(RaidNotificationModel model)
+		{
+			NotificationTimer timer = new NotificationTimer(model);
+			timer.TimerElapsed += Timer_TimerElapsed;
+			timers.Add(timer);
+			return timer;
+		}
+
+		
 
 		private async void Timer_TimerElapsed(object? sender, ElapsedEventArgs e)
 		{
@@ -62,6 +94,9 @@ namespace RaidReminder.Services
 
 				if (model == null)
 					return;
+
+				if (model.RepeatWeekly)
+					await AddNotificationAsync(model);
 
 				SocketTextChannel channel = client.GetChannel(model.ChannelId) as SocketTextChannel;
 				IRole role = client.GetGuild(model.GuildId).GetRole(model.RoleId);
@@ -84,7 +119,7 @@ namespace RaidReminder.Services
 				foreach (RaidNotificationModel model in dbContext.RaidNotifications)
 				{
 					
-					NotificationTimer timer = await AddNotificationAsync(model);
+					NotificationTimer timer = InitializeNotification(model);
 					_logger.LogInformation($"Initialized notification on {timer.NextNotification}");
 				}
 			}

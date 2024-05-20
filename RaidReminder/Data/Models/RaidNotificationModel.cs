@@ -1,4 +1,5 @@
 ﻿using Discord.Interactions;
+using RaidReminder.Modules;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,18 +16,22 @@ namespace RaidReminder.Data.Models
 		public ulong GuildId { get; set; }
 		public ulong ChannelId { get; set; }
 		public ulong RoleId { get; set; }
+		public bool RepeatWeekly { get; set; }
+		public USTimeZones InputTimeZone { get; set; }
 
 		public RaidNotificationModel()
 		{
 		}
 
-		public RaidNotificationModel(SocketInteractionContext context, ulong roleId, DayOfWeek day, TimeOnly time)
+		public RaidNotificationModel(SocketInteractionContext context, ulong roleId, DayOfWeek day, TimeOnly time, bool repeatWeekly, USTimeZones inputTimezone)
 		{
 			GuildId = context.Guild.Id;
 			ChannelId = context.Channel.Id;
 			RoleId = roleId;
 			Time = time;
 			Day = day;
+			RepeatWeekly = repeatWeekly;
+			InputTimeZone = inputTimezone;
 		}
 	}
 }
