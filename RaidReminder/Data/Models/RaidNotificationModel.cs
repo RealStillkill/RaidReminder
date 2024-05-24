@@ -17,13 +17,12 @@ namespace RaidReminder.Data.Models
 		public ulong ChannelId { get; set; }
 		public ulong RoleId { get; set; }
 		public bool RepeatWeekly { get; set; }
-		public USTimeZones InputTimeZone { get; set; }
 
 		public RaidNotificationModel()
 		{
 		}
 
-		public RaidNotificationModel(SocketInteractionContext context, ulong roleId, DayOfWeek day, TimeOnly time, bool repeatWeekly, USTimeZones inputTimezone)
+		public RaidNotificationModel(SocketInteractionContext context, ulong roleId, DayOfWeek day, TimeOnly time, bool repeatWeekly)
 		{
 			GuildId = context.Guild.Id;
 			ChannelId = context.Channel.Id;
@@ -31,7 +30,6 @@ namespace RaidReminder.Data.Models
 			Time = time;
 			Day = day;
 			RepeatWeekly = repeatWeekly;
-			InputTimeZone = inputTimezone;
 		}
 	}
 }

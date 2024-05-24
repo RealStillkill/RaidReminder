@@ -53,7 +53,7 @@ namespace RaidReminder.Services
 
 		public DateTime GetNextNotificationDate(int id)
 		{
-			return timers.First(x => x.NotificationId == id).NextNotification;
+			return timers.First(x => x.NotificationId == id).NextNotificationUTC;
 		}
 
 		public async Task RemoveNotificationAsync(int id)
@@ -121,8 +121,6 @@ namespace RaidReminder.Services
 
 				await channel.SendMessageAsync($"{role.Mention} it is time for raid in an hour!");
 			}
-
-			
 		}
 
 		public async Task StartAsync()
@@ -135,7 +133,7 @@ namespace RaidReminder.Services
 				{
 					
 					NotificationTimer timer = InitializeNotification(model);
-					_logger.LogInformation($"Initialized notification on {timer.NextNotification}");
+					_logger.LogInformation($"Initialized notification on {timer.NextNotificationUTC}");
 				}
 			}
 		}
@@ -144,7 +142,7 @@ namespace RaidReminder.Services
 	internal class NotificationTimer
 	{
 		public int NotificationId { get; private set; }
-		public DateTime NextNotification { get; private set; }
+		public DateTime NextNotificationUTC { get; private set; }
 
 		public event EventHandler<ElapsedEventArgs> TimerElapsed;
 
@@ -154,17 +152,18 @@ namespace RaidReminder.Services
 		public NotificationTimer(RaidNotificationModel raidNotification)
 		{
 			NotificationId = raidNotification.Id;
-			DateTime currentDateTime = DateTime.Now;
+			DateTime currentDateTime = DateTime.UtcNow;
 			int daysToAdd = ((int)raidNotification.Day - (int)currentDateTime.DayOfWeek + 7) % 7;
 			DateTime result = new DateTime(currentDateTime.Year, currentDateTime.Month, currentDateTime.Day, 
-			raidNotification.Time.Hour, raidNotification.Time.Minute, raidNotification.Time.Second);
-			NextNotification = result.AddDays(daysToAdd);
-			if (NextNotification - DateTime.Now < TimeSpan.Zero)
-				NextNotification = NextNotification.AddDays(7);
-			TimeSpan interval = NextNotification - DateTime.Now;
+			raidNotification.Time.Hour, raidNotification.Time.Minute, raidNotification.Time.Second, DateTimeKind.Utc);
+			NextNotificationUTC = result.AddDays(daysToAdd);
+			if (NextNotificationUTC - DateTime.UtcNow < TimeSpan.Zero)
+				NextNotificationUTC = NextNotificationUTC.AddDays(7);
+			TimeSpan interval = NextNotificationUTC - DateTime.UtcNow;
 
 
 			_timer = new Timer(interval);
+			_timer.AutoReset = false;
 			_timer.Elapsed += _timer_Elapsed;
 			_timer.Start();
 		}

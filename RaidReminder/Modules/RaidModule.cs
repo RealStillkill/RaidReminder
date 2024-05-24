@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using RaidReminder.Data;
 using RaidReminder.Data.Models;
 using RaidReminder.Services;
+using System;
 
 namespace RaidReminder.Modules
 {
@@ -21,20 +22,44 @@ namespace RaidReminder.Modules
 
 
 
-		[SlashCommand("add-reminder", "Creates a reminder that will notify your players")]
-		public async Task AddReminder(DayOfWeek dayOfWeek,
-			[Summary(description:"What hour of the day should the notification happen? (24hr format, MST unless overridden)")][MaxValue(23)][MinValue(0)]int hour,
-			[Summary(description:"What what minute of the hour should the notificaiton happen?")][MaxValue(59)][MinValue(0)] int minute,
-			[Summary(description:"What role should we ping? (Default: true)")]IRole role,
-			[Summary(description:"Should this reminder be repeated each week?")]bool repeatWeekly = true,
-			[Summary(description:"Override the input timezone, default MST")] USTimeZones timezone = USTimeZones.Mountain)
+		//[SlashCommand("add-reminder", "Creates a reminder that will notify your players")]
+		//public async Task AddReminder(DayOfWeek dayOfWeek,
+		//	[Summary(description:"What hour of the day should the notification happen? (24hr format, MST unless overridden)")][MaxValue(23)][MinValue(0)]int hour,
+		//	[Summary(description:"What what minute of the hour should the notificaiton happen?")][MaxValue(59)][MinValue(0)] int minute,
+		//	[Summary(description:"What role should we ping? (Default: true)")]IRole role,
+		//	[Summary(description:"Should this reminder be repeated each week?")]bool repeatWeekly = true,
+		//	[Summary(description:"Override the input timezone, default MST")] USTimeZones timezone = USTimeZones.Mountain)
+		//{
+		//	_logger.LogInformation("raid add-reminder executed");
+		//	await DeferAsync();
+		//	hour = AdjustTimezone(hour, timezone);
+
+		//	TimeOnly time = new TimeOnly(hour, minute);
+
+
+		//	if ((await _notificationService.GetGuildNotifications(Context.Guild.Id)).Count() == 10)
+		//	{
+		//		await FollowupAsync("You have hit the limit for raid notifications in this server. Delete an existing notification before making a new one");
+		//		return;
+		//	}
+
+		//	RaidNotificationModel model = new RaidNotificationModel(Context, role.Id, dayOfWeek, time, repeatWeekly);
+
+		//	NotificationTimer timer = await _notificationService.AddNotificationAsync(model);
+
+		//	TimestampTag tag = new TimestampTag(timer.NextNotificationUTC, TimestampTagStyles.Relative);
+
+		//	EmbedBuilder builder = new EmbedBuilder()
+		//		.WithTitle("New raid notification created")
+		//		.WithDescription($"Next notification will occur {tag}");
+		//	await FollowupAsync(embed: builder.Build());
+		//}
+
+		[SlashCommand("add-reminder-utc", "Creates a reminder that will notify your players")]
+		public async Task AddReminder(ulong unixTimestamp, IRole role, bool repeatWeekly)
 		{
-			_logger.LogInformation("raid add-reminder executed");
 			await DeferAsync();
-			hour = AdjustTimezone(hour, timezone);
-
-			TimeOnly time = new TimeOnly(hour, minute);
-
+			_logger.LogInformation("raid add-reminder-utc executed");
 
 			if ((await _notificationService.GetGuildNotifications(Context.Guild.Id)).Count() == 10)
 			{
@@ -42,17 +67,26 @@ namespace RaidReminder.Modules
 				return;
 			}
 
-			RaidNotificationModel model = new RaidNotificationModel(Context, role.Id, dayOfWeek, time, repeatWeekly, timezone);
+			DateTime targetDateTime = GetDateTimeFromUnix(unixTimestamp);
+
+			DayOfWeek dayOfWeek = targetDateTime.DayOfWeek;
+			TimeOnly time = new TimeOnly(targetDateTime.Hour, targetDateTime.Minute);
+
+			RaidNotificationModel model = new RaidNotificationModel(Context, role.Id, dayOfWeek, time, repeatWeekly);
 
 			NotificationTimer timer = await _notificationService.AddNotificationAsync(model);
 
-			TimestampTag tag = new TimestampTag(timer.NextNotification, TimestampTagStyles.Relative);
 
+
+
+			TimestampTag tag = new TimestampTag(timer.NextNotificationUTC, TimestampTagStyles.Relative);
 			EmbedBuilder builder = new EmbedBuilder()
 				.WithTitle("New raid notification created")
 				.WithDescription($"Next notification will occur {tag}");
 			await FollowupAsync(embed: builder.Build());
+
 		}
+
 
 		[SlashCommand("delete-reminder", "Opens a menu to delete a notification")]
 		public async Task DeleteMenu()
@@ -116,6 +150,15 @@ namespace RaidReminder.Modules
 				await FollowupAsync("An error has occurred", ephemeral:true);
 			}
 		}
+		
+
+		private DateTime GetDateTimeFromUnix(ulong timestamp)
+		{
+			DateTime dateTime = new DateTime(1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
+			dateTime = dateTime.AddSeconds(timestamp);
+			return dateTime;
+		}
+
 
 		private int AdjustTimezone(int hour, USTimeZones timezone)
 		{
@@ -123,10 +166,10 @@ namespace RaidReminder.Modules
 			switch (timezone)
 			{
 				case USTimeZones.Pacific:
-					hour += 2;
+					hour -= 8;
 					break;
 				case USTimeZones.Mountain:
-					hour += 1;
+					hour -= 6;
 					break;
 				case USTimeZones.Central:
 					hour += 0;
