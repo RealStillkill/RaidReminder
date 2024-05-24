@@ -119,8 +119,7 @@ namespace RaidReminder.Services
 				//	.AddRow(new ActionRowBuilder()
 				//	.WithButton("delete notification", "delete-notification", ButtonStyle.Danger));
 
-
-				await channel.SendMessageAsync($"{role.Mention} it is time for raid.");
+				await channel.SendMessageAsync($"{role.Mention} it is time for raid in an hour!");
 			}
 
 			
